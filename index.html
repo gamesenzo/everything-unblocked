@@ -1,0 +1,66 @@
+
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Zoekpagina</title>
+  <style>
+    body {
+      font-family: system-ui;
+      max-width: 600px;
+      margin: 40px auto;
+      padding: 0 16px;
+    }
+    input, button {
+      font: inherit;
+      padding: 10px;
+    }
+    input {
+      width: 100%;
+      box-sizing: border-box;
+    }
+    button {
+      margin-top: 8px;
+    }
+    #resultaat {
+      margin-top: 16px;
+    }
+  </style>
+</head>
+<body>
+  <input id="zoekInput" placeholder="Typ zoekopdracht..." />
+  <button onclick="zoek()">Zoek</button>
+  <div id="resultaat"></div>
+
+  <script>
+    const PROXY = 'https://zoekproxy.201146.workers.dev';
+
+    async function zoek() {
+      const q = document.getElementById('zoekInput').value.trim();
+      if (!q) return;
+
+      const resultaat = document.getElementById('resultaat');
+      resultaat.textContent = 'Zoeken...';
+
+      try {
+        const res = await fetch(PROXY + '/?q=' + encodeURIComponent(q));
+        const data = await res.json();
+
+        if (!res.ok) {
+          resultaat.textContent = 'Fout: ' + (data.error || 'onbekend');
+          return;
+        }
+
+        resultaat.innerHTML = '<a href="' + data.url + '" target="_blank" rel="noopener">' + data.url + '</a>';
+      } catch (e) {
+        resultaat.textContent = 'Netwerkfout: ' + e.message;
+      }
+    }
+
+    document.getElementById('zoekInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') zoek();
+    });
+  </script>
+</body>
+</html>
