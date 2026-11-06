@@ -2,65 +2,346 @@
 <!DOCTYPE html>
 <html lang="nl">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Zoekpagina</title>
-  <style>
-    body {
-      font-family: system-ui;
-      max-width: 600px;
-      margin: 40px auto;
-      padding: 0 16px;
-    }
-    input, button {
-      font: inherit;
-      padding: 10px;
-    }
-    input {
-      width: 100%;
-      box-sizing: border-box;
-    }
-    button {
-      margin-top: 8px;
-    }
-    #resultaat {
-      margin-top: 16px;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Everything Unblocked</title>
+
+<style>
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #111827;
+  color: white;
+}
+
+header {
+  text-align: center;
+  padding: 25px 15px 15px;
+}
+
+h1 {
+  margin: 0 0 20px;
+  font-size: 30px;
+}
+
+.search {
+  display: flex;
+  gap: 8px;
+  max-width: 750px;
+  margin: auto;
+}
+
+input {
+  min-width: 0;
+  flex: 1;
+  padding: 13px;
+  border: 1px solid #374151;
+  border-radius: 8px;
+  background: #1f2937;
+  color: white;
+  font-size: 16px;
+}
+
+button {
+  padding: 12px 17px;
+  border: 0;
+  border-radius: 8px;
+  background: #2563eb;
+  color: white;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #1d4ed8;
+}
+
+#resultaat {
+  max-width: 750px;
+  margin: 15px auto;
+  padding: 0 12px;
+  overflow-wrap: anywhere;
+}
+
+#resultaat a {
+  color: #60a5fa;
+}
+
+.browser {
+  margin: 20px auto;
+  width: 96%;
+  max-width: 1300px;
+  background: #1f2937;
+  border: 1px solid #374151;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.toolbar {
+  display: flex;
+  gap: 7px;
+  padding: 10px;
+  align-items: center;
+  background: #1f2937;
+}
+
+.toolbar button {
+  padding: 10px 13px;
+  flex-shrink: 0;
+}
+
+#adres {
+  flex: 1;
+  width: 100%;
+}
+
+#browserFrame {
+  width: 100%;
+  height: 650px;
+  display: block;
+  border: 0;
+  background: white;
+}
+
+#melding {
+  padding: 12px;
+  color: #d1d5db;
+  font-size: 13px;
+  text-align: center;
+}
+
+@media(max-width: 600px) {
+  .search {
+    flex-wrap: wrap;
+  }
+
+  .search input {
+    flex-basis: 100%;
+  }
+
+  .toolbar {
+    flex-wrap: wrap;
+  }
+
+  #adres {
+    flex-basis: 100%;
+    order: 2;
+  }
+
+  #browserFrame {
+    height: 500px;
+  }
+}
+</style>
 </head>
+
 <body>
-  <input id="zoekInput" placeholder="Typ zoekopdracht..." />
-  <button onclick="zoek()">Zoek</button>
-  <div id="resultaat"></div>
 
-  <script>
-    const PROXY = 'https://zoekproxy.201146.workers.dev';
+<header>
+  <h1>Everything Unblocked</h1>
 
-    async function zoek() {
-      const q = document.getElementById('zoekInput').value.trim();
-      if (!q) return;
+  <div class="search">
+    <input
+      id="zoekInput"
+      type="search"
+      placeholder="Wat wil je zoeken?"
+    >
+    <button onclick="zoek()">Zoeken</button>
+  </div>
+</header>
 
-      const resultaat = document.getElementById('resultaat');
-      resultaat.textContent = 'Zoeken...';
+<div id="resultaat">
+  Typ iets om te zoeken.
+</div>
 
-      try {
-        const res = await fetch(PROXY + '/?q=' + encodeURIComponent(q));
-        const data = await res.json();
+<div class="browser">
 
-        if (!res.ok) {
-          resultaat.textContent = 'Fout: ' + (data.error || 'onbekend');
-          return;
-        }
+  <div class="toolbar">
 
-        resultaat.innerHTML = '<a href="' + data.url + '" target="_blank" rel="noopener">' + data.url + '</a>';
-      } catch (e) {
-        resultaat.textContent = 'Netwerkfout: ' + e.message;
-      }
+    <button onclick="terug()" title="Terug">←</button>
+
+    <button onclick="vooruit()" title="Vooruit">→</button>
+
+    <button onclick="vernieuw()" title="Vernieuwen">↻</button>
+
+    <input
+      id="adres"
+      type="text"
+      placeholder="Voer een websiteadres in..."
+    >
+
+    <button onclick="openAdres()">Open</button>
+
+    <button onclick="nieuwTabblad()">Nieuw tabblad</button>
+
+  </div>
+
+  <iframe
+    id="browserFrame"
+    title="Ingebouwde browser"
+    referrerpolicy="no-referrer"
+  ></iframe>
+
+  <div id="melding">
+    Zoek een website of voer hierboven een adres in.
+  </div>
+
+</div>
+
+<script>
+
+const PROXY = "https://zoekproxy.201146.workers.dev";
+
+const zoekInput = document.getElementById("zoekInput");
+const resultaat = document.getElementById("resultaat");
+const adres = document.getElementById("adres");
+const frame = document.getElementById("browserFrame");
+const melding = document.getElementById("melding");
+
+let geschiedenis = [];
+let positie = -1;
+
+function veiligeURL(value) {
+  let url;
+
+  try {
+    url = new URL(
+      /^https?:\/\//i.test(value)
+        ? value
+        : "https://" + value
+    );
+  } catch {
+    throw new Error("Ongeldig websiteadres.");
+  }
+
+  if (url.protocol !== "http:" && url.protocol !== "https:") {
+    throw new Error("Alleen HTTP- en HTTPS-adressen zijn toegestaan.");
+  }
+
+  return url.href;
+}
+
+function laadWebsite(value, opslaan = true) {
+  let url;
+
+  try {
+    url = veiligeURL(value);
+  } catch (error) {
+    melding.textContent = error.message;
+    return;
+  }
+
+  if (opslaan) {
+    geschiedenis = geschiedenis.slice(0, positie + 1);
+    geschiedenis.push(url);
+    positie++;
+  }
+
+  adres.value = url;
+  frame.src = url;
+
+  melding.textContent =
+    "Website wordt geladen. Sommige websites blokkeren ingebouwde weergave.";
+}
+
+async function zoek() {
+  const q = zoekInput.value.trim();
+
+  if (!q) return;
+
+  resultaat.textContent = "Bezig met zoeken...";
+
+  try {
+    const response = await fetch(
+      PROXY + "/?q=" + encodeURIComponent(q)
+    );
+
+    const data = await response.json();
+
+    if (!response.ok || !data.url) {
+      resultaat.textContent =
+        data.error || "Geen zoekresultaat gevonden.";
+      return;
     }
 
-    document.getElementById('zoekInput').addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') zoek();
-    });
-  </script>
+    const url = veiligeURL(data.url);
+
+    resultaat.replaceChildren();
+
+    const tekst = document.createElement("p");
+    tekst.textContent = "Eerste zoekresultaat:";
+
+    const link = document.createElement("a");
+    link.href = url;
+    link.textContent = url;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+
+    const open = document.createElement("button");
+    open.textContent = "Openen";
+    open.style.marginLeft = "10px";
+    open.onclick = () => laadWebsite(url);
+
+    resultaat.append(tekst, link, open);
+
+  } catch (error) {
+    resultaat.textContent = "Zoekfout: " + error.message;
+  }
+}
+
+function openAdres() {
+  if (!adres.value.trim()) return;
+  laadWebsite(adres.value.trim());
+}
+
+function terug() {
+  if (positie > 0) {
+    positie--;
+    laadWebsite(geschiedenis[positie], false);
+  }
+}
+
+function vooruit() {
+  if (positie < geschiedenis.length - 1) {
+    positie++;
+    laadWebsite(geschiedenis[positie], false);
+  }
+}
+
+function vernieuw() {
+  if (positie >= 0) {
+    frame.src = geschiedenis[positie];
+  }
+}
+
+function nieuwTabblad() {
+  if (positie >= 0) {
+    window.open(
+      geschiedenis[positie],
+      "_blank",
+      "noopener,noreferrer"
+    );
+  }
+}
+
+zoekInput.addEventListener("keydown", event => {
+  if (event.key === "Enter") zoek();
+});
+
+adres.addEventListener("keydown", event => {
+  if (event.key === "Enter") openAdres();
+});
+
+frame.addEventListener("load", () => {
+  melding.textContent =
+    "Pagina geladen. Als de inhoud niet zichtbaar is, blokkeert de website mogelijk iframe-weergave.";
+});
+
+</script>
+
 </body>
 </html>
